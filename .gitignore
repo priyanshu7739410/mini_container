@@ -1,0 +1,27 @@
+# Compile Artifacts
+mycontainer
+*.o
+runtime/*.o
+
+# Root Filesystem (should not be committed to GitHub; populated via setup_rootfs.sh)
+rootfs/
+*.tar.gz
+
+# Previous Raw Experiments (Binaries)
+basic
+clone_basic
+fork_exec
+mount_namespace
+pid_namespace
+
+# Local IDE and System files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.log
+
+# Private Study & Interview Prep Guides
+INTERVIEW_CHEAT_SHEET.md
+guide.md
+runtime/*.md
