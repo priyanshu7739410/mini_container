@@ -102,5 +102,5 @@ sudo ./mycontainer run --memory 100M --cpu "20000 100000" --hostname production 
 
 ### list running containers
 ```bash
-sudo find /sys/fs/cgroup -maxdepth 1 -type d | grep mycontainer
+find /sys/fs/cgroup -maxdepth 1 -type d | grep mycontainer
 ```
