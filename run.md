@@ -85,7 +85,7 @@ Use the CLI flags to restrict physical resource consumption.
 ```bash
 sudo ./mycontainer run --memory 50M --hostname sandbox /bin/sh
 ```
-* The kernel writes `52428800` bytes to `/sys/fs/cgroup/mycontainer/memory.max`.
+* The kernel writes `52428800` bytes to `/sys/fs/cgroup/mycontainer-<PID>/memory.max`.
 * If a process inside the container allocates more than 50MB, the Out-Of-Memory (OOM) killer will terminate it immediately.
 
 ### Restricting CPU Usage (e.g. 10% of 1 CPU Core)
@@ -98,4 +98,9 @@ sudo ./mycontainer run --cpu "10000 100000" --hostname sandbox /bin/sh
 ### Combining Limits
 ```bash
 sudo ./mycontainer run --memory 100M --cpu "20000 100000" --hostname production /bin/sh
+```
+
+### list running containers
+```bash
+sudo find /sys/fs/cgroup -maxdepth 1 -type d | grep mycontainer
 ```

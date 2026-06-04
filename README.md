@@ -35,7 +35,7 @@ sequenceDiagram
     Note over Child: Spawned into isolated namespaces
     Child->>Child: Close write end, block on read(sync_pipe_[0])
     
-    Main->>Cgroup: Create /sys/fs/cgroup/mycontainer
+    Main->>Cgroup: Create /sys/fs/cgroup/mycontainer-<PID>
     Main->>Cgroup: Write Child PID to cgroup.procs
     Main->>Cgroup: Write "50M" to memory.max
     Main->>Child: Write sync byte to sync_pipe_[1] (Unblocks Child)
@@ -55,7 +55,7 @@ sequenceDiagram
     Main->>Main: waitpid(child_pid)
     Note over User: User interacts with container shell
     User->>Child: exit
-    Main->>Cgroup: rmdir(/sys/fs/cgroup/mycontainer) (Cleanup)
+    Main->>Cgroup: rmdir(/sys/fs/cgroup/mycontainer-<PID>) (Cleanup)
     Main->>User: Exit status returned
     deactivate Main
 ```
@@ -142,3 +142,39 @@ Start a CPU-constrained container restricting the process to 10% of a single CPU
 ```bash
 sudo ./mycontainer run --cpu "10000 100000" /bin/sh
 ```
+
+---
+
+## Performance Benchmarks
+
+We measured the container startup latency (the time taken to boot an isolated environment, execute `/bin/true` or equivalent, and terminate) across 10 sequential runs.
+
+### Results & Comparison
+
+| Iteration | `mycontainer` (WSL2 / bash) | Docker (`alpine:latest` / PowerShell) |
+| :--- | :--- | :--- |
+| **Run 1** | 8 ms | 494.8 ms |
+| **Run 2** | 8 ms | 493.5 ms |
+| **Run 3** | 7 ms | 473.8 ms |
+| **Run 4** | 7 ms | 477.0 ms |
+| **Run 5** | 7 ms | 469.8 ms |
+| **Run 6** | 7 ms | 518.3 ms |
+| **Run 7** | 6 ms | 502.6 ms |
+| **Run 8** | 6 ms | 521.1 ms |
+| **Run 9** | 7 ms | 538.6 ms |
+| **Run 10** | 7 ms | 568.3 ms |
+| **Average** | **7 ms** | **505.8 ms** |
+
+#### Benchmark Screen Captures
+
+**`mycontainer` Startup Latency Benchmark (Average: 7ms)**
+![mycontainer Benchmark](assets/mycontainer_benchmark.png)
+
+**Docker Startup Latency Benchmark (Average: 505.8ms)**
+![Docker Benchmark](assets/docker_benchmark.jpg)
+
+### Analysis
+
+`mycontainer` starts **~72x faster** than Docker. 
+* **Docker's Overhead**: Docker relies on a background service client-server daemon architecture (`dockerd`/`containerd`), REST APIs, gRPC channels, and complex virtual network bridge creation.
+* **Our Implementation**: Since `mycontainer` is written in C++ and interacts directly with host Linux kernel primitives (namespaces, chroot, and Cgroups v2) without external background daemons or API routing layers, it spins up near-instantly with minimal memory and processing footprint.

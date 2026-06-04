@@ -128,7 +128,7 @@ bool Container::start() {
     }
 
     // 7. Cleanup resource configurations
-    Cgroups::cleanup();
+    Cgroups::cleanup(child_pid);
 
     if (WIFEXITED(status)) {
         std::cout << "[+] Container exited cleanly with status: " << WEXITSTATUS(status) << "\n";
