@@ -16,6 +16,23 @@ A custom, high-performance, educational container runtime built from scratch in 
 
 ---
 
+## Architecture Diagram
+
+```text
+User
+  │
+  ▼
+mycontainer
+  │
+  ├── Namespaces
+  ├── Chroot
+  ├── Procfs
+  └── Cgroups v2
+         │
+         ▼
+ Linux Kernel
+```
+
 ## Architectural Flow
 
 The diagram below details the bootstrap, synchronization, and isolation sequence executed by the runtime:
@@ -90,6 +107,13 @@ Using a complete, lightweight minirootfs like **Alpine Linux** solves this elega
 ### 3. What is the fundamental difference between Namespaces and Cgroups?
 - **Namespaces (Isolation - "What you can see")**: Virtualizes system resources so that a group of processes sees a dedicated instance of a system resource (e.g., PID, Mounts, Hostname, Network). It isolates *logical* resources.
 - **Cgroups (Resource Limits - "How much you can use")**: Controls and limits the *physical* hardware resources allocated to a group of processes (e.g., maximum memory, CPU share, disk I/O bandwidth, network priority). It manages *physical* resource limits to prevent noisy-neighbor scenarios and denial-of-service (DoS) states on the host.
+
+### Key Engineering Challenges
+
+- **Understanding why PID namespaces alone do not isolate `/proc`**: Navigated virtual procfs bindings and learned to cleanly remount `/proc` so system monitoring tools inside the jail do not leak host-level processes.
+- **Debugging dynamic linker failures inside chroot environments**: Resolved loader execution traps (misleading "No such file or directory" errors) by structuring proper shared libraries (`ld-linux.so`, `libc.so`) inside the minirootfs jail.
+- **Implementing parent-child synchronization during container bootstrap**: Used UNIX pipes to synchronize processes, ensuring resource bounds (Cgroups v2 limits) are applied by the parent before the child process gains kernel execution.
+- **Managing Cgroup lifecycle and cleanup safely**: Configured automatic removal of Cgroup directories (`rmdir`) upon child process exit to prevent kernel resource directory leaks.
 
 ---
 
@@ -175,6 +199,6 @@ We measured the container startup latency (the time taken to boot an isolated en
 
 ### Analysis
 
-`mycontainer` starts **~72x faster** than Docker. 
+In our benchmark environment, `mycontainer` demonstrated significantly lower startup latency (~7 ms average) compared to Docker (~506 ms average), primarily due to direct kernel interactions and the absence of daemon-based orchestration layers.
 * **Docker's Overhead**: Docker relies on a background service client-server daemon architecture (`dockerd`/`containerd`), REST APIs, gRPC channels, and complex virtual network bridge creation.
 * **Our Implementation**: Since `mycontainer` is written in C++ and interacts directly with host Linux kernel primitives (namespaces, chroot, and Cgroups v2) without external background daemons or API routing layers, it spins up near-instantly with minimal memory and processing footprint.
